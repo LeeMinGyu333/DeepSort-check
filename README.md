@@ -45,21 +45,27 @@ results.show()
 
 #(2). use my dataset( in windows , pi에서 할 시 경로만 바꾸면 잘될거임.)
 import torch
+import cv2
+import numpy as np
 
-model=torch.hub.load('C:\\Users\\KOSTA\\yolov5','custom',path='C:\\Users\\KOSTA\\best.pt',source='local')
+# model load
+model = torch.hub.load('ultralytics/yolov5', 'custom', path='C:/Users/KOSTA/best.pt', force_reload=True, device='cpu')
 
+# image load and preprocessing
+img = cv2.imread('C:/Users/KOSTA/Downloads/mingyu2.jpg')
+img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-img_path='C:\\Users\\KOSTA\\Downloads\\cat.jpg'
+# into the model (support Auto preprocessing)
+results = model(img)
 
-results=model(img_path)
-
+# output answer.
 results.print()
 results.show()
-results.show()
 
 
 
-#use my dataset( in Ubuntu(Raspberry pi))
+
+#(2-1). use my dataset( in Ubuntu(Raspberry pi))
 import torch
 
 model=torch.hub.load('home/pi/yolov5','custom',path='home/pi/best.pt',source='local')
@@ -72,3 +78,6 @@ results=model(img_path)
 results.print()
 results.show()
 results.show()
+
+
+
