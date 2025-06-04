@@ -43,22 +43,32 @@ results.print()
 results.show()
 
 
-#(2). use my dataset
-from roboflow import Roboflow
+#(2). use my dataset( in windows , pi에서 할 시 경로만 바꾸면 잘될거임.)
 import torch
 
-#1. download Roboflow Dataset
-rf = Roboflow(api_key="QuSmgEUYSEhArO48H4LV")
-project = rf.workspace("search-buyer").project("peopledetection-qyok3-dlf77")
-version = project.version(5)
-dataset = version.download("yolov5")
+model=torch.hub.load('C:\\Users\\KOSTA\\yolov5','custom',path='C:\\Users\\KOSTA\\best.pt',source='local')
 
-#2. load YOLOc5 model
-model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
 
-#3. Insurance test image.
-img_path= "C:\\Users\\KOSTA\\Downloads\\pilgi.jpg"
+img_path='C:\\Users\\KOSTA\\Downloads\\cat.jpg'
+
 results=model(img_path)
 
 results.print()
+results.show()
+results.show()
+
+
+
+#use my dataset( in Ubuntu(Raspberry pi))
+import torch
+
+model=torch.hub.load('home/pi/yolov5','custom',path='home/pi/best.pt',source='local')
+
+
+img_path='?/cat.jpg'
+
+results=model(img_path)
+
+results.print()
+results.show()
 results.show()
