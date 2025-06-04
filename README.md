@@ -83,7 +83,81 @@ results.show()
 
 
 #U want use DeepSORT?
+import warnings
+warnings.filterwarnings('ignore',category=FutureWarning)
 
+import os
+import random
+import cv2
+import torch
+
+import pathlib
+import platform
+
+if platform.system() == 'Windows':
+    # pathlib.PosixPath 대신 WindowsPath를 사용하도록 강제 패치
+    pathlib.PosixPath = pathlib.WindowsPath
+
+from deep_sort_realtime.deepsort_tracker import DeepSort  # DeepSORT 설치 필요
+
+# 비디오 경로 설정
+video_path = os.path.join('.', 'data', 'people.mp4')
+video_out_path = os.path.join('.', 'out.mp4')
+
+# 비디오 읽기
+cap = cv2.VideoCapture(video_path)
+ret, frame = cap.read()
+
+# 출력 비디오 설정
+cap_out = cv2.VideoWriter(
+    video_out_path,
+    cv2.VideoWriter_fourcc(*'MP4V'),
+    cap.get(cv2.CAP_PROP_FPS),
+    (frame.shape[1], frame.shape[0])
+)
+
+# YOLOv5 모델 로드
+model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', device='cpu', force_reload=True)
+print("AutoShape added") 
+# DeepSORT 초기화
+tracker = DeepSort(max_age=30)
+
+# 색상 팔레트 생성
+colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
+
+detection_threshold = 0.5
+
+while ret:
+    # YOLOv5는 BGR 이미지를 받음
+    results = model(frame)
+
+    detections = []
+    for result in results.xyxy[0].tolist():
+        x1, y1, x2, y2, score, class_id = result
+        x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+        if score > detection_threshold:
+            detections.append(([x1, y1, x2 - x1, y2 - y1], score, 'person'))
+
+    # tracker.update expects: list of [tlwh, confidence, class]
+    tracks = tracker.update_tracks(detections, frame=frame)
+
+    # 트래킹 결과 시각화
+    for track in tracks:
+        if not track.is_confirmed():
+            continue
+        track_id = track.track_id
+        l, t, r, b = track.to_ltrb()
+        color = colors[int(track_id) % len(colors)]
+        cv2.rectangle(frame, (int(l), int(t)), (int(r), int(b)), color, 3)
+        cv2.putText(frame, f"ID: {track_id}", (int(l), int(t) - 10),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+    cap_out.write(frame)
+    ret, frame = cap.read()
+
+cap.release()
+cap_out.release()
+cv2.destroyAllWindows()
 
 
 
