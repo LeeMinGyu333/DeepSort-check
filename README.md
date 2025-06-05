@@ -82,9 +82,12 @@ results.show()
 
 
 
-#U want use DeepSORT?
+#Tracking in PC(windows) in DeepSORT?
 import warnings
 warnings.filterwarnings('ignore',category=FutureWarning)
+
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
 
 import os
 import random
@@ -94,40 +97,39 @@ import torch
 import pathlib
 import platform
 
+
 if platform.system() == 'Windows':
-    # pathlib.PosixPath 대신 WindowsPath를 사용하도록 강제 패치
     pathlib.PosixPath = pathlib.WindowsPath
 
 from deep_sort_realtime.deepsort_tracker import DeepSort  # DeepSORT 설치 필요
 
-# 비디오 경로 설정
-video_path = os.path.join('.', 'data', 'people.mp4')
-video_out_path = os.path.join('.', 'out.mp4')
+# 웹캠 열기 (기본 카메라: 0)
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 640)
 
-# 비디오 읽기
-cap = cv2.VideoCapture(video_path)
-ret, frame = cap.read()
-
-# 출력 비디오 설정
-cap_out = cv2.VideoWriter(
-    video_out_path,
-    cv2.VideoWriter_fourcc(*'MP4V'),
-    cap.get(cv2.CAP_PROP_FPS),
-    (frame.shape[1], frame.shape[0])
-)
+if not cap.isOpened():
+    print("웹캠 열기에 실패했습니다.")
+    exit()
 
 # YOLOv5 모델 로드
 model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', device='cpu', force_reload=True)
-print("AutoShape added") 
+print("YOLOv5 모델 로드 완료")
+
 # DeepSORT 초기화
 tracker = DeepSort(max_age=30)
 
 # 색상 팔레트 생성
-colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(10)]
+colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for j in range(50)]
 
 detection_threshold = 0.5
 
-while ret:
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("프레임 읽기에 실패했습니다.")
+        break
+
     # YOLOv5는 BGR 이미지를 받음
     results = model(frame)
 
@@ -152,11 +154,14 @@ while ret:
         cv2.putText(frame, f"ID: {track_id}", (int(l), int(t) - 10),
             cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
-    cap_out.write(frame)
-    ret, frame = cap.read()
+    # 결과 출력
+    cv2.imshow('Real-time Tracking', frame)
+
+    # 'q'를 누르면 종료
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cap.release()
-cap_out.release()
 cv2.destroyAllWindows()
 
 
