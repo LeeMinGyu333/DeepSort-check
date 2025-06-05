@@ -83,8 +83,6 @@ results.show()
 
 
 #Tracking in PC(windows) in DeepSORT?
-import warnings
-warnings.filterwarnings('ignore',category=FutureWarning)
 
 import warnings
 warnings.filterwarnings('ignore', category=FutureWarning)
@@ -163,6 +161,81 @@ while True:
 
 cap.release()
 cv2.destroyAllWindows()
+
+
+
+#Tracking DeepSORT in cart(Ubuntu24.04)
+
+import warnings
+warnings.filterwarnings('ignore', category=FutureWarning)
+
+import os
+import random
+import cv2
+import torch
+from deep_sort_realtime.deepsort_tracker import DeepSort  # DeepSORT 설치 필요
+
+# YOLOv5 모델 로드
+model = torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', device='cpu', force_reload=True)
+print("YOLOv5 model loaded")
+
+# DeepSORT 초기화
+tracker = DeepSort(max_age=30)
+
+# 색상 팔레트 생성
+colors = [(random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) for _ in range(50)]
+
+# 웹캠 열기 (기본 카메라: 0)
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 640)
+
+if not cap.isOpened():
+    print("❌ 웹캠 열기에 실패했습니다.")
+    exit()
+
+detection_threshold = 0.5
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("❌ 프레임 읽기에 실패했습니다.")
+        break
+
+    # YOLOv5는 BGR 이미지를 받음
+    results = model(frame)
+
+    detections = []
+    for result in results.xyxy[0].tolist():
+        x1, y1, x2, y2, score, class_id = result
+        x1, y1, x2, y2 = map(int, [x1, y1, x2, y2])
+        if score > detection_threshold:
+            detections.append(([x1, y1, x2 - x1, y2 - y1], score, 'person'))
+
+    # tracker.update expects: list of [tlwh, confidence, class]
+    tracks = tracker.update_tracks(detections, frame=frame)
+
+    # 트래킹 결과 시각화
+    for track in tracks:
+        if not track.is_confirmed():
+            continue
+        track_id = track.track_id
+        l, t, r, b = track.to_ltrb()
+        color = colors[int(track_id) % len(colors)]
+        cv2.rectangle(frame, (int(l), int(t)), (int(r), int(b)), color, 3)
+        cv2.putText(frame, f"ID: {track_id}", (int(l), int(t) - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
+
+    # 결과 출력
+    cv2.imshow('Real-time Tracking', frame)
+
+    # 'q'를 누르면 종료
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
 
 
 
